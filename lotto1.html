@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUCKY LOTTO - SLIM HISTORY</title>
+    <style>
+        :root {
+            --gold: #ffd700;
+            --dark-bg: #0a0a1a;
+            --side-bg: rgba(15, 15, 35, 0.98);
+            --color-1: #fbc531; --color-11: #487eb0; --color-21: #e84118; --color-31: #7f8fa6; --color-41: #4cd137;
+        }
+
+        body {
+            background: radial-gradient(circle at center, #1b2735 0%, #090a0f 100%);
+            height: 100vh; margin: 0; display: flex; font-family: 'Pretendard', sans-serif; color: white; overflow: hidden;
+        }
+
+        .main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* 상단 통계 판넬 */
+        .stats-panel { background: rgba(0, 0, 0, 0.5); padding: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .stats-panel h4 { margin: 0 0 10px 10px; font-size: 0.9rem; color: var(--gold); letter-spacing: 1px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 6px; max-width: 1000px; }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.03); border-radius: 8px; padding: 6px 2px; text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.4s;
+        }
+        .stat-box.lv-10 { background: rgba(255, 215, 0, 0.15); border-color: var(--gold); }
+        .stat-box.lv-20 { background: rgba(255, 215, 0, 0.3); border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
+        .stat-box.lv-30 { background: rgba(255, 215, 0, 0.5); border-color: #fff; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+
+        .num-label { font-weight: 800; display: block; font-size: 0.9rem; }
+        .stat-box.range-1 .num-label { color: var(--color-1); }
+        .stat-box.range-11 .num-label { color: var(--color-11); }
+        .stat-box.range-21 .num-label { color: var(--color-21); }
+        .stat-box.range-31 .num-label { color: var(--color-31); }
+        .stat-box.range-41 .num-label { color: var(--color-41); }
+        .count-label { color: #aaa; font-size: 0.75rem; display: block; }
+        
+        @keyframes countUp {
+            0% { transform: scale(1); color: #aaa; }
+            50% { transform: scale(1.5); color: #fff; }
+            100% { transform: scale(1); color: #aaa; }
+        }
+        .bump { animation: countUp 0.5s ease-out; }
+
+        /* 중앙 추첨 영역 */
+        .generator-area { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .ball-slot-container { display: flex; gap: 20px; margin-bottom: 50px; height: 85px; align-items: center; }
+        .ball-slot { width: 80px; height: 80px; border-radius: 50%; border: 2px dashed rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.2); position: relative; }
+        
+        .ball {
+            position: absolute; top: 0; left: 0; width: 80px; height: 80px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; font-weight: 900; font-size: 2.2rem; color: white;
+            z-index: 10;
+            box-shadow: inset -8px -8px 15px rgba(0,0,0,0.5), inset 8px 8px 15px rgba(255,255,255,0.35), 0 15px 30px rgba(0,0,0,0.6);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+        }
+        
+        .ball.range-1  { background: radial-gradient(circle at 35% 35%, #ffeaa7, var(--color-1), #d39e00); }
+        .ball.range-11 { background: radial-gradient(circle at 35% 35%, #74b9ff, var(--color-11), #192a56); }
+        .ball.range-21 { background: radial-gradient(circle at 35% 35%, #ff7675, var(--color-21), #8a1300); }
+        .ball.range-31 { background: radial-gradient(circle at 35% 35%, #dfe6e9, var(--color-31), #2d3436); }
+        .ball.range-41 { background: radial-gradient(circle at 35% 35%, #55efc4, var(--color-41), #006266); }
+
+        @keyframes fancyPop {
+            0% { opacity: 0; transform: translate3d(var(--tx), var(--ty), 500px) rotateX(720deg) scale(0); }
+            100% { opacity: 1; transform: translate3d(0, 0, 0) rotateX(0) scale(1); }
+        }
+        .ball.animate { animation: fancyPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+        .btn-generate {
+            padding: 20px 80px; font-size: 1.5rem; font-weight: 900; letter-spacing: 2px;
+            background: linear-gradient(to bottom, #ffe066, #fbc531);
+            color: #000; border: none; border-radius: 50px; cursor: pointer; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: 0.2s; text-transform: uppercase;
+        }
+        .btn-generate:hover:not(:disabled) { transform: translateY(-3px); }
+
+        /* 히스토리 사이드바 최적화 */
+        .sidebar { width: 260px; background: var(--side-bg); border-left: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; }
+        .history-list { flex: 1; overflow-y: auto; padding: 5px 10px; margin: 0; list-style: none; }
+        
+        /* 최신 1개 스타일 유지 */
+        .history-item.latest { 
+            background: rgba(255, 215, 0, 0.08); padding: 10px; border-radius: 12px; 
+            margin-bottom: 8px; border: 1px solid rgba(255, 215, 0, 0.2); 
+        }
+        .latest-time { font-size: 0.7rem; color: var(--gold); margin-bottom: 6px; text-align: center; font-weight: bold; }
+        .mini-ball { 
+            width: 24px; height: 24px; border-radius: 50%; font-size: 0.7rem; display: flex; 
+            align-items: center; justify-content: center; font-weight: bold; margin-right: 4px; 
+            box-shadow: inset -2px -2px 4px rgba(0,0,0,0.3); 
+        }
+        
+        /* 2번째 리스트부터 숫자 스타일 (Bold 제거 & 간격 축소) */
+        .history-item.compact { 
+            padding: 3px 0; /* 세로 간격 최소화 */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03); 
+            display: flex; justify-content: center; 
+        }
+        .compact-num-list { display: flex; gap: 8px; }
+        .compact-num { 
+            font-weight: 400; /* Bold 제거 */
+            font-size: 1.05rem; 
+            letter-spacing: -0.5px;
+        }
+        
+        .txt-range-1 { color: var(--color-1); } .txt-range-11 { color: var(--color-11); }
+        .txt-range-21 { color: var(--color-21); } .txt-range-31 { color: var(--color-31); }
+        .txt-range-41 { color: var(--color-41); }
+
+        .mini-ball.range-1  { background: var(--color-1); color:#000; } 
+        .mini-ball.range-11 { background: var(--color-11); }
+        .mini-ball.range-21 { background: var(--color-21); } 
+        .mini-ball.range-31 { background: var(--color-31); }
+        .mini-ball.range-41 { background: var(--color-41); }
+
+        /* ===== RESPONSIVE DESIGN ===== */
+        
+        /* Tablet (768px - 1024px) */
+        @media screen and (max-width: 1024px) {
+            .sidebar { width: 200px; }
+            .stats-grid { grid-template-columns: repeat(9, 1fr); }
+            .ball { width: 65px; height: 65px; font-size: 1.8rem; }
+            .ball-slot { width: 65px; height: 65px; }
+            .ball-slot-container { gap: 12px; margin-bottom: 35px; height: 70px; }
+            .btn-generate { padding: 16px 50px; font-size: 1.2rem; }
+            .stat-box { padding: 4px 2px; }
+            .num-label { font-size: 0.8rem; }
+            .count-label { font-size: 0.65rem; }
+        }
+
+        /* Mobile Landscape (576px - 767px) */
+        @media screen and (max-width: 767px) {
+            body { flex-direction: column; overflow: auto; height: auto; min-height: 100vh; }
+            .main-container { flex: none; }
+            .sidebar { 
+                width: 100%; 
+                border-left: none; 
+                border-top: 1px solid rgba(255, 255, 255, 0.1); 
+                max-height: 200px;
+            }
+            .sidebar-header { padding: 10px; }
+            .history-list { padding: 5px; }
+            
+            .stats-panel { padding: 10px; }
+            .stats-panel h4 { font-size: 0.75rem; margin: 0 0 8px 5px; }
+            .stats-grid { grid-template-columns: repeat(9, 1fr); gap: 4px; }
+            .stat-box { padding: 3px 1px; }
+            .num-label { font-size: 0.7rem; }
+            .count-label { font-size: 0.6rem; }
+            
+            .generator-area { padding: 20px 10px; }
+            .generator-area h1 { 
+                font-size: 1.5rem; 
+                letter-spacing: 4px !important; 
+                margin-bottom: 25px !important;
+            }
+            .ball-slot-container { gap: 8px; margin-bottom: 25px; height: 55px; flex-wrap: wrap; justify-content: center; }
+            .ball { width: 50px; height: 50px; font-size: 1.3rem; }
+            .ball-slot { width: 50px; height: 50px; }
+            .btn-generate { 
+                padding: 14px 40px; 
+                font-size: 1rem; 
+                border-radius: 30px;
+            }
+        }
+
+        /* Mobile Portrait (< 576px) */
+        @media screen and (max-width: 480px) {
+            .stats-grid { grid-template-columns: repeat(8, 1fr); gap: 3px; }
+            .stat-box { border-radius: 4px; }
+            .num-label { font-size: 0.65rem; }
+            .count-label { font-size: 0.55rem; }
+            
+            .ball { width: 42px; height: 42px; font-size: 1.1rem; }
+            .ball-slot { width: 42px; height: 42px; }
+            .ball-slot-container { gap: 5px; }
+            .btn-generate { 
+                padding: 12px 30px; 
+                font-size: 0.9rem; 
+            }
+            .generator-area h1 { font-size: 1.2rem; }
+            
+            .sidebar { max-height: 180px; }
+            .history-item.latest { padding: 8px; }
+            .mini-ball { width: 20px; height: 20px; font-size: 0.6rem; }
+            .compact-num { font-size: 0.9rem; }
+            .compact-num-list { gap: 5px; }
+        }
+
+        /* Extra small devices */
+        @media screen and (max-width: 360px) {
+            .stats-grid { grid-template-columns: repeat(7, 1fr); }
+            .ball { width: 36px; height: 36px; font-size: 1rem; }
+            .ball-slot { width: 36px; height: 36px; }
+            .btn-generate { padding: 10px 25px; font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <div class="stats-panel">
+            <h4>📊 ACCUMULATED FREQUENCY</h4>
+            <div id="statsGrid" class="stats-grid"></div>
+        </div>
+
+        <div class="generator-area">
+            <h1 style="letter-spacing: 8px; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.4); margin-bottom: 40px; font-weight: 900;">LUCKY DRAW</h1>
+            <div class="ball-slot-container" id="slotContainer">
+                <div class="ball-slot"></div><div class="ball-slot"></div><div class="ball-slot"></div>
+                <div class="ball-slot"></div><div class="ball-slot"></div><div class="ball-slot"></div>
+            </div>
+            <button class="btn-generate" id="drawBtn" onclick="generateLotto()">Start Draw</button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3 style="margin:0; color:var(--gold); font-size:0.85rem;">HISTORY</h3>
+            <button style="background:none; border:none; color:#ff4757; cursor:pointer; font-size:0.75rem; font-weight: bold;" onclick="clearHistory()">RESET</button>
+        </div>
+        <ul id="historyList" class="history-list"></ul>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'LOTTO_FINAL_DATA_V2';
+
+        window.onload = () => {
+            initStatsGrid();
+            updateStatsUI();
+            renderHistoryUI();
+        };
+
+        function initStatsGrid() {
+            const grid = document.getElementById('statsGrid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= 45; i++) {
+                const rangeNum = Math.floor((i-1)/10)*10 + 1;
+                const box = document.createElement('div');
+                box.className = `stat-box range-${rangeNum}`;
+                box.id = `stat-box-${i}`;
+                box.innerHTML = `<span class="num-label">${i}</span><span class="count-label" id="cnt-num-${i}">0</span>`;
+                grid.appendChild(box);
+            }
+        }
+
+        function generateLotto() {
+            const btn = document.getElementById('drawBtn');
+            const slots = document.querySelectorAll('.ball-slot');
+            btn.disabled = true;
+            slots.forEach(slot => slot.innerHTML = '');
+            
+            let numbers = [];
+            while(numbers.length < 6) {
+                let n = Math.floor(Math.random() * 45) + 1;
+                if(!numbers.includes(n)) numbers.push(n);
+            }
+            numbers.sort((a, b) => a - b);
+
+            numbers.forEach((num, i) => {
+                const tx = (Math.random() - 0.5) * 1600;
+                const ty = (Math.random() - 0.5) * 1600;
+                setTimeout(() => {
+                    const ball = document.createElement('div');
+                    ball.className = `ball animate ${getRangeClass(num)}`;
+                    ball.style.setProperty('--tx', `${tx}px`);
+                    ball.style.setProperty('--ty', `${ty}px`);
+                    ball.innerText = num;
+                    slots[i].appendChild(ball);
+                    if(i === 5) {
+                        saveData(numbers);
+                        btn.disabled = false;
+                    }
+                }, i * 250);
+            });
+        }
+
+        function getRangeClass(num) {
+            if(num <= 10) return 'range-1'; if(num <= 20) return 'range-11';
+            if(num <= 30) return 'range-21'; if(num <= 40) return 'range-31';
+            return 'range-41';
+        }
+
+        function saveData(nums) {
+            let data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"history":[], "counts":{}}');
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+            data.history.unshift({ nums: nums, time: dateStr });
+            data.history = data.history.slice(0, 100);
+            nums.forEach(n => { data.counts[n] = (data.counts[n] || 0) + 1; });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); 
+            updateStatsUI(nums);
+            renderHistoryUI();
+        }
+
+        function updateStatsUI(newNums = []) {
+            const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"history":[], "counts":{}}');
+            const counts = data.counts;
+            for (let i = 1; i <= 45; i++) {
+                const label = document.getElementById(`cnt-num-${i}`);
+                const box = document.getElementById(`stat-box-${i}`);
+                const currentCount = counts[i] || 0;
+                label.innerText = `${currentCount}회`;
+                if (newNums.includes(i)) {
+                    label.classList.remove('bump');
+                    void label.offsetWidth;
+                    label.classList.add('bump');
+                }
+                box.classList.remove('lv-10', 'lv-20', 'lv-30');
+                if (currentCount >= 30) box.classList.add('lv-30');
+                else if (currentCount >= 20) box.classList.add('lv-20');
+                else if (currentCount >= 10) box.classList.add('lv-10');
+            }
+        }
+
+        function renderHistoryUI() {
+            const list = document.getElementById('historyList');
+            const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"history":[], "counts":{}}');
+            list.innerHTML = data.history.map((item, index) => {
+                if (index === 0) {
+                    return `
+                        <li class="history-item latest">
+                            <div class="latest-time">${item.time}</div>
+                            <div style="display:flex; justify-content:center;">
+                                ${item.nums.map(n => `<div class="mini-ball ${getRangeClass(n)}">${n}</div>`).join('')}
+                            </div>
+                        </li>
+                    `;
+                } else {
+                    return `
+                        <li class="history-item compact">
+                            <div class="compact-num-list">
+                                ${item.nums.map(n => `<span class="compact-num txt-${getRangeClass(n)}">${n}</span>`).join('')}
+                            </div>
+                        </li>
+                    `;
+                }
+            }).join('');
+        }
+
+        function clearHistory() {
+            if(confirm('Reset all data?')) {
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
